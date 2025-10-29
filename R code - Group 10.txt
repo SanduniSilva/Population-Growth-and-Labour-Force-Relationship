@@ -1,0 +1,114 @@
+data <- read_excel("Group 10.xlsx")
+
+summary(data)
+
+#no. of observations
+nrow(data)
+
+data <-data[(data$y<1000000),]
+
+boxplot(data$x1,
+        ylab = "x1"
+)
+
+boxplot(data$x2,
+        ylab = "x2"
+)
+
+boxplot(data$x3,
+        ylab = "x3"
+)
+
+#OUTLIERS
+data <-data[(data$x1<2500000),]
+data <-data[(data$x2<19),]
+data <-data[(data$x3<10),]
+
+boxplot(data$x1,
+        ylab = "x1"
+)
+
+boxplot(data$x2,
+        ylab = "x2"
+)
+
+boxplot(data$x3,
+        ylab = "x3"
+)
+
+summary(data)
+
+lm3 <- lm(y ~ x1+x2+x3, data = data)
+summary(lm3)
+
+lm3_log<-lm(y ~ log(x1)+log(x2)+log(x3),data=data)
+summary(lm3_log)
+
+
+#multicollinearity
+library(car)
+vif(lm3_log)
+
+
+#heteroscedasticity
+library(lmtest)
+bptest(lm3_log)
+
+
+#Model misspecification
+library(ggplot2)
+
+residuals <- resid(lm3_log)
+shapiro.test(residuals)
+
+#serial correlation
+library(lmtest)
+dwtest(lm3_log)
+
+#GLS
+data$id <- 1:nrow(data)
+
+library(nlme)
+fit <- gls(y ~ x1+x2+x3, data = data, correlation = corAR1(form = ~ 1 | id))
+
+summary(fit)
+newdata <- data.frame(x1 = c(4, 5, 6), x2 = c(2, 3, 4), x3 = c(1, 2, 3))
+predictions <- predict(fit, newdata = newdata)
+
+#pannel regression-fixed
+library(plm)
+model_fixed <- plm(y ~ x1 + x2 + x3, data = data, index = c("Country", "Time"), model = "within")
+summary(model_fixed)
+
+#pannel regression-random
+library(plm)
+model_random <- plm(y ~ x1 + x2 + x3, data = data, index = c("Country", "Time"), model = "random")
+summary(model_random)
+
+
+#hypothesis testing
+library(plm)
+
+# Create a dummy dataset
+df <- data.frame(Country=rep(1:100, each=10), Time=rep(2000:2009, 100),
+                 x1=rnorm(1000, mean=100, sd=10), lf=rnorm(1000, mean=100, sd=10))
+
+# Convert the dataset into a panel object
+pdata.frame(df, index = c("Country", "Time"))
+
+#hypothesis 1
+# Fit the random effects model
+model1 <- plm(y ~ x1, data=data, model="random")
+summary(model1)
+
+#hypothesis 2
+model2 <- plm(y ~ x1 + x2, data=data, model="random")
+summary(model2)
+
+#hypothesis 3
+model3 <- plm(y ~ x1 + x2 + x3, data=data, model="random")
+summary(model3)
+
+
+
+
